@@ -2,7 +2,7 @@
  * 书籍新增/编辑弹窗组件
  */
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, InputNumber, Button, message, Row, Col, Space } from 'antd';
+import { Modal, Form, Input, InputNumber, Button, message, Row, Col, Space, Select } from 'antd';
 import { queryDouban, createBook, updateBook } from '../api/book';
 
 export const BookFormModal = ({ visible, book, isEditing, categories, onClose, onSuccess }) => {
@@ -63,23 +63,23 @@ export const BookFormModal = ({ visible, book, isEditing, categories, onClose, o
         const data = res.data;
         // 自动填充表单字段
         form.setFieldsValue({
-          title: data.title,
-          author: data.author,
-          publisher: data.publisher,
-          publish_year: data.publish_year,
-          pages: data.pages ? parseInt(data.pages) : undefined,
-          price: data.price,
-          binding: data.binding,
-          translator: data.translator,
-          original_title: data.original_title,
+          title: data.title || form.getFieldValue('title'),
+          author: data.author || form.getFieldValue('author'),
+          publisher: data.publisher || form.getFieldValue('publisher'),
+          publish_year: data.publish_year || form.getFieldValue('publish_year'),
+          pages: data.pages || form.getFieldValue('pages'),
+          price: data.price || form.getFieldValue('price'),
+          binding: data.binding || form.getFieldValue('binding'),
+          original_title: data.original_title || form.getFieldValue('original_title'),
+          subtitle: data.subtitle || form.getFieldValue('subtitle'),
         });
-        message.success('自动填充成功');
+        message.success('已从豆瓣获取书籍信息');
       } else {
-        message.error(res.message || '查询失败，请检查ISBN是否正确');
+        message.warning(res.message || '未找到该ISBN对应的书籍');
       }
     } catch (error) {
       console.error('豆瓣查询失败:', error);
-      message.error('豆瓣查询失败');
+      message.error('豆瓣查询失败，请稍后重试');
     } finally {
       setDoubanLoading(false);
     }
@@ -95,52 +95,61 @@ export const BookFormModal = ({ visible, book, isEditing, categories, onClose, o
           取消
         </Button>,
         <Button key="submit" type="primary" loading={loading} onClick={handleSubmit}>
-          提交
+          保存
         </Button>,
       ]}
-      width={900}
+      width={800}
+      destroyOnClose
     >
-      <Form form={form} layout="vertical">
+      <Form form={form} layout="vertical" preserve={false}>
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="isbn"
-              label="ISBN"
-              rules={[{ required: true, message: '请输入ISBN' }]}
-            >
-              <Space.Compact>
-                <Input placeholder="请输入ISBN" style={{ width: 'calc(100% - 100px)' }} />
-                <Button onClick={handleDoubanQuery} loading={doubanLoading}>
-                  豆瓣查询
-                </Button>
-              </Space.Compact>
-            </Form.Item>
-          </Col>
           <Col span={12}>
             <Form.Item
               name="title"
               label="书名"
               rules={[{ required: true, message: '请输入书名' }]}
             >
-              <Input placeholder="请输入书名" />
+              <Input placeholder="请输入书名（必填）" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="isbn" label="ISBN">
+              <Input
+                placeholder="请输入ISBN"
+                addonAfter={
+                  <Button
+                    type="link"
+                    size="small"
+                    loading={doubanLoading}
+                    onClick={handleDoubanQuery}
+                    style={{ padding: 0, height: 'auto' }}
+                  >
+                    豆瓣查询
+                  </Button>
+                }
+              />
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item name="location" label="位置">
-              <Input placeholder="请输入位置" />
+            <Form.Item name="category" label="类型">
+              <Select
+                placeholder="请选择类型"
+                allowClear
+                showSearch
+                mode="default"
+                options={categories.map(cat => ({ label: cat, value: cat }))}
+                filterOption={(input, option) =>
+                  option.label.toLowerCase().includes(input.toLowerCase())
+                }
+              />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="category" label="类型">
-              <Input placeholder="请输入或选择类型" list="category-list" />
-              <datalist id="category-list">
-                {categories.map((cat) => (
-                  <option key={cat} value={cat} />
-                ))}
-              </datalist>
+            <Form.Item name="location" label="位置">
+              <Input placeholder="请输入存放位置" />
             </Form.Item>
           </Col>
         </Row>
@@ -166,7 +175,7 @@ export const BookFormModal = ({ visible, book, isEditing, categories, onClose, o
           </Col>
           <Col span={12}>
             <Form.Item name="series" label="丛书">
-              <Input placeholder="请输入丛书" />
+              <Input placeholder="请输入丛书名称" />
             </Form.Item>
           </Col>
         </Row>
